@@ -3,38 +3,72 @@ package com.example.configuration.service;
 import com.example.configuration.mapper.ConfigMapper;
 import com.example.configuration.model.ConfigData;
 import com.example.configuration.model.Configuration;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.example.configuration.commons.CommonUtils.isEmpty;
 
-@Component
-@RequiredArgsConstructor
-public abstract class AbstractConfigService implements ConfigService{
-    private final ConfigMapper configMapper;
-    private Map<String, ConfigData> configDatas = new ConcurrentHashMap<>();
-    private List<Configuration> configurations = new ArrayList<>();
+public abstract class AbstractConfigService implements ConfigService {
+    private ConfigMapper configMapper;
+    private Map<String, ConfigData> configurations = new ConcurrentHashMap<>(); // 최근 업데이트 데이터
+
+    public AbstractConfigService() {
+        this.configMapper = null;
+    }
 
     @Override
     public boolean loadConfiguration() {
-        // 1. 업데이트 내역이 있는지 확인
-        if (isEmpty(configDatas)) {
-            return updateAll();
-        }
 
         List<ConfigData> updateList = getUpdateList();
-        if (isEmpty(updateList)) {
-            return true;
+
+        for (ConfigData data : updateList) {
+            try {
+                if (isEmpty(data.getUpdateTime())) continue;
+
+                lastUpdate(data); // 전역변수 및 최근 업데이트 날짜 갱신
+
+            } catch (Exception e) {
+                // [확인 필요] 로그 추가할 것
+                e.printStackTrace();
+            }
         }
-        // 2-1. 업데이트 내역이 없으면 return
-        // 2-2. 업데이트 내역이 있으면 업데이트
-        return update(updateList);
+
+        return true;
+    }
+
+    private void lastUpdate(ConfigData data) {
+
+        if (isEmpty(data) || isEmpty(data.getUpdateTime())) {
+            // [확인 필요] 로그 추가할 것
+            throw new NullPointerException();
+        }
+
+        String tableName = data.getTName();
+
+        if (configurations.containsKey(tableName) == true) {
+            ConfigData configData = configurations.get(tableName);
+
+            if (configData.getUpdateTime().before(data.getUpdateTime())) {
+                configurations.put(tableName, data);
+                updateConfigurations(tableName);
+            }
+
+        } else {
+            configurations.put(tableName, data);
+            updateConfigurations(tableName);
+        }
+    }
+
+    private void updateConfigurations(String tableName) {
+
+        if (isEmpty(tableName)) {
+            // [확인 필요] 로그 추가할 것
+            throw new NullPointerException();
+        }
+
+        Map<String, String> param = new ConcurrentHashMap<>();
+        param.put("tableName", tableName);
+        configurations.get(tableName).setData(selectConfiguration(param));
     }
 
 
@@ -42,55 +76,13 @@ public abstract class AbstractConfigService implements ConfigService{
         return configMapper.selectUpdateList();
     }
 
+    public Map<String, ConfigData> getConfiguration() {return configurations;}
 
-    private boolean update(List<ConfigData> list) {
-
-        if (isEmpty(list)) {
-            // [확인 필요] 로그 추가할 것
-            throw new NullPointerException("업데이트할 항목 없음.");
-        }
-
-        try {
-
-            for (ConfigData item : list) {
-                String tName = item.getTName();
-                Date lastUpdateTime = item.getUpdateTime();
-
-                ConfigData prev = configDatas.get(tName);
-                Date prevUpdateTime = prev.getUpdateTime();
-
-                if (lastUpdateTime.before(prevUpdateTime)) {
-                    updateByTable(tName);
-                }
-            }
-
-
-        } catch (Exception e) {
-
-        }
-
-        return true;
+    public List<Configuration> selectConfiguration(Map<String, String> param) {
+        return configMapper.selectConfiguration(param);
     }
 
-
-    private void updateByTable(String tName) {
-
-        if (isEmpty(tName)) {
-            throw new NullPointerException();
-        }
-
-        switch (tName) {
-            case "t_configuration" :
-        }
+    public void setConfigMapper(ConfigMapper configMapper) {
+        this.configMapper = configMapper;
     }
-
-
-    public boolean updateAll() {
-        //configurations = configMapper.getConfigurations();
-        return true;
-    }
-
-    public List<Configuration> getConfiguration() {return configurations;}
-
-
 }

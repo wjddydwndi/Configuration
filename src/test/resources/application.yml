@@ -1,10 +1,11 @@
 spring:
-  database:
-    url: jdbc:log4jdbc:mysql://146.56.180.17:33061/invitation
+  datasource:
+    url: jdbc:mysql://146.56.180.17:33061
     username: ubuntu
     password: ghwls12!!
     driver-class-name: net.sf.log4jdbc.DriverSpy
     hikari:
+      enkey:
       auto-commit: true
       pool-size: 2
       max-life-time: 1800000

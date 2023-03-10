@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -15,6 +16,7 @@ import org.springframework.context.annotation.Configuration;
 import javax.sql.DataSource;
 
 @Configuration
+@MapperScan(basePackages = "com.example.configuration.mapper", sqlSessionFactoryRef = "sqlSessionFactory")
 public class DatabaseConfig {
     @Value("${spring.database.url}")
     private String url;
@@ -26,8 +28,6 @@ public class DatabaseConfig {
     private String driverClassName;
     @Value("${spring.database.hikari.pool-size}")
     private int poolSize;
-    @Value("${spring.database.hikari.enckey}")
-    private String enckey;
     @Value("${spring.database.hikari.idle-timeout}")
     private int idleTimeout;
     @Value("${spring.database.hikari.max-life-time}")
@@ -54,7 +54,6 @@ public class DatabaseConfig {
         hikariConfig.setAutoCommit(true);                                           //  connection 이 종료되거나 pool에 반환된 때, connection에 속해잇는 transaction을 commit 할지를 결정
         hikariConfig.setConnectionTimeout(3000);                                    //  connection pool 에서 connection 을 얻어오기 전까지 기다리는 최대시간, 허용가능한 wait time을 초과하면 SQL Exception 발생 *default 30000 ms (30s)
         hikariConfig.setPoolName("database-database-pool");                      //  connection pool 이름을 지정함. logging 이나 JMX management console 에 표시되는 이름
-        hikariConfig.setConnectionInitSql("SET @enckey = '".concat(enckey).concat("'"));
         hikariConfig.setConnectionTestQuery("SELECT 1");
 
         HikariDataSource hikariDataSource = new HikariDataSource(hikariConfig);
@@ -63,11 +62,12 @@ public class DatabaseConfig {
     }
 
     @Bean("sqlSessionFactory")
-    public SqlSessionFactory sqlSessionFactory(@Qualifier ("dataSource")DataSource dataSource, ApplicationContext applicationContext) throws Exception{
+    public SqlSessionFactory sqlSessionFactory(@Qualifier("dataSource") DataSource dataSource, ApplicationContext applicationContext) throws Exception{
 
         SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
-        sqlSessionFactoryBean.setConfigLocation(applicationContext.getResource("classpath:mybatis/mybatis-config"));
-        sqlSessionFactoryBean.setMapperLocations(applicationContext.getResource("classpath:mybatis/mapper/*Mapper.xml"));
+        sqlSessionFactoryBean.setDataSource(dataSource);
+        sqlSessionFactoryBean.setConfigLocation(applicationContext.getResource("classpath:mybatis/mybatis-config.xml"));
+        sqlSessionFactoryBean.setMapperLocations(applicationContext.getResources("classpath:mybatis/mapper/*Mapper.xml"));
         return sqlSessionFactoryBean.getObject();
     }
 
