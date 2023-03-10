@@ -1,8 +1,8 @@
 spring:
   database:
-    url: jdbc:log4jdbc:mysql://146.56.180.17:33061/invitation
-    username: ubuntu
-    password: ghwls12!!
+    url:
+    username:
+    password:
     driver-class-name: net.sf.log4jdbc.DriverSpy
     hikari:
       auto-commit: true
